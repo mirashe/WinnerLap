@@ -34,7 +34,7 @@ public:
     }
 
     // returns true in case of successful read, returns false in case of finishing the string.
-    // throws domain exception when parse operation failes
+    // throws invalid argument exception when parse operation failes
     bool getNextRecord(unsigned int& currentKartNumber, recordClock& parsedClock) {
         std::string kartNumberString{};
         std::getline(mRecordsStream, kartNumberString, ',');
@@ -50,21 +50,23 @@ public:
     }
 
 private:
+    // Of course it is not hard to parse different parts of time expression and calculate the given time
+    // But this way we take benefits of the standard methodes
+    // and it makes it easier to support other time formats in future
     recordClock parseClock(const std::string& clockTime) const {
         std::stringstream timeStringStream(clockTime);
         std::time_t t = std::time(0);   // get time now
         std::tm parsedTimeObject;
+        // Initialize the time struct with current date to have a complete date time after reading the time expressions
         localtime_s(&parsedTimeObject, &t);
         timeStringStream >> std::get_time(&parsedTimeObject, "%H:%M:%S");
 
         if (timeStringStream.fail())
         {
-            std::cerr << "parse failed";
-            throw std::domain_error("Can not parse the given timestamp: " + clockTime);
+            throw std::invalid_argument("Can not parse the given timestamp: " + clockTime);
         }
 
-        auto tt = std::mktime(&parsedTimeObject);
-        recordClock result = std::chrono::system_clock::from_time_t(tt);
+        recordClock result = std::chrono::system_clock::from_time_t(std::mktime(&parsedTimeObject));
 
         return result;
     }
@@ -102,11 +104,23 @@ auto getBestLap(recordsReader& reader)
     return std::tuple{ bestLapKartNumber, bestLapTime };
 }
 
-int main() {
+int main(int argc, char** argv) {
+    if (argc != 2)
+    {
+        std::cerr << "Error: Incorrect number of argument are given!" << std::endl;
+        std::cerr << "Please pass the <kart times file path> as the argument in command line." << std::endl;
+
+        return 1;
+    }
+
     recordsReader reader;
     
-    if (!reader.open("../karttimes.csv"))
+    if (!reader.open(argv[1]))
+    {
+        std::cerr << "Error: Cannot open the given file: " << argv[1] << std::endl;
+
         return 1;
+    }
 
     try {
         auto [bestLapKartNumber, bestLapTime] = getBestLap(reader);
@@ -114,7 +128,7 @@ int main() {
         std::cout << "Best lap seconds: " << std::chrono::duration_cast<std::chrono::seconds>(bestLapTime).count() << std::endl;
         std::cout << "Best lap kart number : " << bestLapKartNumber << std::endl;
     }
-    catch (std::exception ex) {
+    catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
         return 1;
     }
