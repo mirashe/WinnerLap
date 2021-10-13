@@ -26,6 +26,8 @@ public:
 
         std::string unusedHeaders;
         std::getline(mRecordsStream, unusedHeaders);
+
+        return true;
     }
 
     void close()
@@ -47,6 +49,8 @@ public:
         std::string currentClockString;
         std::getline(mRecordsStream, currentClockString);        
         parsedClock = parseClock(currentClockString);
+
+        return true;
     }
 
 private:
@@ -105,8 +109,7 @@ auto getBestLap(recordsReader& reader)
 }
 
 int main(int argc, char** argv) {
-    if (argc != 2)
-    {
+    if (argc != 2) {
         std::cerr << "Error: Incorrect number of argument are given!" << std::endl;
         std::cerr << "Please pass the <kart times file path> as the argument in command line." << std::endl;
 
@@ -115,8 +118,7 @@ int main(int argc, char** argv) {
 
     recordsReader reader;
     
-    if (!reader.open(argv[1]))
-    {
+    if (!reader.open(argv[1])) {
         std::cerr << "Error: Cannot open the given file: " << argv[1] << std::endl;
 
         return 1;
