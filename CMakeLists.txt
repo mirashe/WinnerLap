@@ -9,4 +9,9 @@ else()
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /std:c++17")
 endif()
 
-add_executable(WinnerLap source.cpp)
+add_executable(WinnerLap
+	main.cpp
+	recordsReader.cpp
+	recordsReader.h
+	lapCalculator.cpp
+	lapCalculator.h)
