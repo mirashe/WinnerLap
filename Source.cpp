@@ -99,64 +99,73 @@ private:
     std::ifstream mRecordsStream;
 };
 
-// This function returns the number of all karts participated in race as the first output
-// And the maximum number of times an individual kart passed the start/finish line.
-// This is equal to number of laps plus one
-auto getNumberOfKartsAndPasses(const std::vector<timeRecord>& records) {
-    std::vector<size_t> kartLastLaps{};
-    size_t lapsCount{};
-
-    for (const auto &record: records) {
-        if (record.mKartNumber > kartLastLaps.size())
-            kartLastLaps.resize(record.mKartNumber);
-
-        ++kartLastLaps[record.mKartNumber - 1];
-
-        if (kartLastLaps[record.mKartNumber - 1] > lapsCount)
-            lapsCount = kartLastLaps[record.mKartNumber - 1];
+class lapCalculator {
+public:
+    lapCalculator(recordsReader& reader): mReader(reader) {
     }
 
-    return std::tuple{ kartLastLaps.size(), lapsCount };
-}
+    // This function returns the number of all karts participated in race as the first output
+    // And the maximum number of times an individual kart passed the start/finish line.
+    // This is equal to number of laps plus one
+    auto getNumberOfKartsAndPasses(const std::vector<timeRecord>& records) {
+        std::vector<size_t> kartLastLaps{};
+        size_t lapsCount{};
 
-auto getBestLap(recordsReader& reader)
-{
-    auto records = reader.getRecords();
-    auto [kartsCount, passesCount] = getNumberOfKartsAndPasses(records);
+        for (const auto& record : records) {
+            if (record.mKartNumber > kartLastLaps.size())
+                kartLastLaps.resize(record.mKartNumber);
 
-    unsigned int bestLapKartNumber{};
-    auto bestLapTime = std::chrono::system_clock::duration::max();
-    size_t bestLapNumber{};
+            ++kartLastLaps[record.mKartNumber - 1];
 
-    // to keep it simple I assumed kart numbers always start from 1 and continues sequentially,
-    // otherwise we can use a map instead of vector
-    std::vector<std::pair<size_t, recordClock>> passNumberAndTimes(kartsCount); // pass number & its time for each kart
-    unsigned int kartNumber{};
-    recordClock parsedClock{};
-
-    for(auto [kartNumber, parsedClock]: records) {
-        ++passNumberAndTimes[kartNumber - 1].first;
-
-        if (passNumberAndTimes[kartNumber - 1].first > 1) // if the kart is not just starting
-        {
-            auto lapTime = parsedClock - passNumberAndTimes[kartNumber - 1].second;
-            if (lapTime < bestLapTime)
-            {
-                bestLapTime = lapTime;
-                bestLapKartNumber = kartNumber;
-                bestLapNumber = passNumberAndTimes[kartNumber - 1].first - 1; // lap number is one less than pass number
-            }
+            if (kartLastLaps[record.mKartNumber - 1] > lapsCount)
+                lapsCount = kartLastLaps[record.mKartNumber - 1];
         }
 
-        passNumberAndTimes[kartNumber - 1].second = parsedClock;
-
-        // if one of karts finished the last lap don't take later records to account
-        if (passNumberAndTimes[kartNumber - 1].first == passesCount)
-            break;
+        return std::tuple{ kartLastLaps.size(), lapsCount };
     }
 
-    return std::tuple{ bestLapKartNumber, bestLapNumber };
-}
+    auto getBestLap()
+    {
+        auto records = mReader.getRecords();
+        auto [kartsCount, passesCount] = getNumberOfKartsAndPasses(records);
+
+        unsigned int bestLapKartNumber{};
+        auto bestLapTime = std::chrono::system_clock::duration::max();
+        size_t bestLapNumber{};
+
+        // to keep it simple I assumed kart numbers always start from 1 and continues sequentially,
+        // otherwise we can use a map instead of vector
+        std::vector<std::pair<size_t, recordClock>> passNumberAndTimes(kartsCount); // pass number & its time for each kart
+        unsigned int kartNumber{};
+        recordClock parsedClock{};
+
+        for (auto [kartNumber, parsedClock] : records) {
+            ++passNumberAndTimes[kartNumber - 1].first;
+
+            if (passNumberAndTimes[kartNumber - 1].first > 1) // if the kart is not just starting
+            {
+                auto lapTime = parsedClock - passNumberAndTimes[kartNumber - 1].second;
+                if (lapTime < bestLapTime)
+                {
+                    bestLapTime = lapTime;
+                    bestLapKartNumber = kartNumber;
+                    bestLapNumber = passNumberAndTimes[kartNumber - 1].first - 1; // lap number is one less than pass number
+                }
+            }
+
+            passNumberAndTimes[kartNumber - 1].second = parsedClock;
+
+            // if one of karts finished the last lap don't take later records to account
+            if (passNumberAndTimes[kartNumber - 1].first == passesCount)
+                break;
+        }
+
+        return std::tuple{ bestLapKartNumber, bestLapNumber };
+    }
+
+private:
+    recordsReader& mReader;
+};
 
 int main(int argc, char** argv) {
     if (argc != 2) {
@@ -174,8 +183,10 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    lapCalculator calculator(reader);
+
     try {
-        auto [bestLapKartNumber, bestLapNumber] = getBestLap(reader);
+        auto [bestLapKartNumber, bestLapNumber] = calculator.getBestLap();
 
         std::cout << "Best lap kart number : " << bestLapKartNumber << std::endl;
         std::cout << "Best lap number: " << bestLapNumber << std::endl;
