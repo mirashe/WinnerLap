@@ -144,7 +144,7 @@ auto getBestLap(recordsReader& reader)
             {
                 bestLapTime = lapTime;
                 bestLapKartNumber = kartNumber;
-                bestLapNumber = passNumberAndTimes[kartNumber - 1].first - 1;
+                bestLapNumber = passNumberAndTimes[kartNumber - 1].first - 1; // lap number is one less than pass number
             }
         }
 
@@ -155,7 +155,7 @@ auto getBestLap(recordsReader& reader)
             break;
     }
 
-    return std::tuple{ bestLapKartNumber, bestLapTime };
+    return std::tuple{ bestLapKartNumber, bestLapNumber };
 }
 
 int main(int argc, char** argv) {
@@ -175,10 +175,10 @@ int main(int argc, char** argv) {
     }
 
     try {
-        auto [bestLapKartNumber, bestLapTime] = getBestLap(reader);
+        auto [bestLapKartNumber, bestLapNumber] = getBestLap(reader);
 
-        std::cout << "Best lap seconds: " << std::chrono::duration_cast<std::chrono::seconds>(bestLapTime).count() << std::endl;
         std::cout << "Best lap kart number : " << bestLapKartNumber << std::endl;
+        std::cout << "Best lap number: " << bestLapNumber << std::endl;
     }
     catch (const std::exception& ex) {
         std::cerr << "Error: " << ex.what() << std::endl;
